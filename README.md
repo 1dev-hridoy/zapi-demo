@@ -17,7 +17,8 @@ Eita ekta simple Express.js demo project ja ZAPI er shob features test korte par
 
 ### Step 1: Package Install
 ```bash
-cd demo
+https://github.com/1dev-hridoy/zapi-demo.git
+cd zapi-demo
 npm install
 ```
 
