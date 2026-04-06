@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>zapi demo — try the api</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/custom.css">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    h1, h2, .brand { font-family: 'Space Grotesk', sans-serif; }
+  </style>
+</head>
+<body class="bg-neutral-50 text-neutral-800 min-h-screen">
+  <header class="border-b-2 border-neutral-900 px-6 py-8">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex flex-wrap items-baseline gap-4 mb-2">
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight brand">zapi demo</h1>
+        <span class="text-sm text-neutral-500 font-mono">v1.0 // express + ejs</span>
+      </div>
+      <p class="text-neutral-600 max-w-2xl">
+        quick demo for <a href="https://z.os7.site" target="_blank" class="underline decoration-2 underline-offset-4 hover:text-neutral-900">z.os7.site</a> api. mess around below.
+      </p>
+      <% if (!hasApiKey) { %>
+        <div class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-amber-100 border-2 border-amber-300 rounded-lg text-amber-800 text-sm">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          <span>add API_KEY to .env to use this thing</span>
+        </div>
+      <% } %>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-8">
+    <section class="mb-16">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 bg-neutral-900 text-white flex items-center justify-center rounded-lg -rotate-2">
+          <i data-lucide="message-square" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold">text models</h2>
+          <p class="text-sm text-neutral-500">8 models, some beta.</p>
+        </div>
+      </div>
+
+      <div class="bg-white border-2 border-neutral-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div class="grid md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium mb-2 text-neutral-700">model</label>
+            <select id="llmModel" class="w-full bg-neutral-50 border-2 border-neutral-300 rounded-lg px-4 py-3 text-neutral-900 focus:border-neutral-900 focus:outline-none transition-colors">
+              <option value="llama3.1-8b">Llama 3.1 8B — fast</option>
+              <option value="qwen-3-235b-a22b-instruct-2507">Qwen 3 235B (beta)</option>
+              <option value="compound-mini">Compound Mini</option>
+              <option value="llama-4-scout-17b-16e-instruct">Llama 4 Scout 17B (beta)</option>
+              <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+              <option value="kimi-k2-instruct-0905">Kimi K2</option>
+              <option value="gpt-oss-20b">GPT OSS 20B</option>
+              <option value="venice">Venice</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2 text-neutral-700">system prompt</label>
+            <input type="text" id="systemPrompt" placeholder="e.g. you are a pirate" 
+              class="w-full bg-neutral-50 border-2 border-neutral-300 rounded-lg px-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none transition-colors">
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-neutral-700">prompt</label>
+          <textarea id="llmPrompt" rows="4" placeholder="what do you want to ask?"
+            class="w-full bg-neutral-50 border-2 border-neutral-300 rounded-lg px-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none transition-colors resize-none font-mono text-sm"></textarea>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <button onclick="sendLLM()" id="llmBtn"
+            class="px-6 py-3 bg-neutral-900 text-white font-medium rounded-lg hover:bg-neutral-800 active:translate-y-0.5 active:shadow-none transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 disabled:shadow-none flex items-center gap-2">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            send
+          </button>
+          <span id="llmStatus" class="text-sm text-neutral-500 hidden flex items-center gap-2">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+            thinking...
+          </span>
+        </div>
+
+        <div id="llmResult" class="mt-6 hidden">
+          <div class="border-2 border-neutral-200 rounded-lg p-4 bg-neutral-50">
+            <div class="flex items-center gap-2 mb-3 text-sm text-neutral-500">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-green-500"></i>
+              <span>response from <span id="responseModel" class="font-mono text-neutral-700"></span></span>
+            </div>
+            <pre id="llmResponse" class="text-neutral-800 whitespace-pre-wrap font-mono text-sm leading-relaxed"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-12 h-12 bg-neutral-900 text-white flex items-center justify-center rounded-lg rotate-1">
+          <i data-lucide="image" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold">image models</h2>
+          <p class="text-sm text-neutral-500">3 models. generate or edit.</p>
+        </div>
+      </div>
+
+      <div class="bg-white border-2 border-neutral-900 rounded-xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+        <div class="grid md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium mb-2 text-neutral-700">model</label>
+            <select id="genModel" class="w-full bg-neutral-50 border-2 border-neutral-300 rounded-lg px-4 py-3 text-neutral-900 focus:border-neutral-900 focus:outline-none transition-colors">
+              <option value="simai-image">SimAI — text to image</option>
+              <option value="gptimage">GPT Image Edit</option>
+              <option value="nanobanana">NanoBanana</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2 text-neutral-700">aspect ratio</label>
+            <select id="aspectRatio" class="w-full bg-neutral-50 border-2 border-neutral-300 rounded-lg px-4 py-3 text-neutral-900 focus:border-neutral-900 focus:outline-none transition-colors">
+              <option value="1:1">1:1 — square</option>
+              <option value="16:9">16:9 — widescreen</option>
+              <option value="9:16">9:16 — portrait</option>
+              <option value="4:3">4:3 — standard</option>
+              <option value="3:4">3:4 — portrait</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2 text-neutral-700">source image url</label>
+            <input type="text" id="imageUrl" placeholder="https://..." 
+              class="w-full bg-neutral-50 border-2 border-neutral-300 rounded-lg px-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none transition-colors">
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2 text-neutral-700">prompt</label>
+          <textarea id="genPrompt" rows="3" placeholder="describe what you want to see..."
+            class="w-full bg-neutral-50 border-2 border-neutral-300 rounded-lg px-4 py-3 text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none transition-colors resize-none font-mono text-sm"></textarea>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <button onclick="generateImage()" id="genBtn"
+            class="px-6 py-3 bg-neutral-900 text-white font-medium rounded-lg hover:bg-neutral-800 active:translate-y-0.5 active:shadow-none transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 disabled:shadow-none flex items-center gap-2">
+            <i data-lucide="wand-2" class="w-4 h-4"></i>
+            generate
+          </button>
+          <span id="genStatus" class="text-sm text-neutral-500 hidden flex items-center gap-2">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
+            cooking...
+          </span>
+        </div>
+
+        <div id="genResult" class="mt-6 hidden">
+          <div class="border-2 border-neutral-200 rounded-lg p-4 bg-neutral-50">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2 text-sm text-neutral-500">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-green-500"></i>
+                <span>generated image</span>
+              </div>
+              <a id="downloadLink" download="zapi-image.png" 
+                class="text-sm text-neutral-600 hover:text-neutral-900 underline decoration-2 underline-offset-4 cursor-pointer flex items-center gap-1">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                download
+              </a>
+            </div>
+            <img id="genImage" class="w-full h-auto rounded-lg border border-neutral-200" alt="generated">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-12">
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-xl p-6">
+        <h3 class="font-bold text-amber-900 mb-2 flex items-center gap-2">
+          <i data-lucide="lightbulb" class="w-4 h-4"></i>
+          quick tips
+        </h3>
+        <ul class="text-sm text-amber-800 space-y-1 list-disc list-inside">
+          <li>api key in <code class="bg-amber-100 px-1 rounded">demo/.env</code> as <code class="bg-amber-100 px-1 rounded">API_KEY=xxx</code></li>
+          <li>image models return binary, not json</li>
+          <li>beta models might be slower</li>
+          <li>don't refresh while waiting</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t-2 border-neutral-900 px-6 py-8 mt-auto">
+    <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-4 text-sm text-neutral-500">
+      <span class="flex items-center gap-2">
+        <i data-lucide="code-2" class="w-4 h-4"></i>
+        made for testing <a href="https://z.os7.site" target="_blank" class="underline hover:text-neutral-900">zapi</a>
+      </span>
+      <span class="font-mono flex items-center gap-2">
+        <i data-lucide="server" class="w-4 h-4"></i>
+        <%= apiBaseUrl %>
+      </span>
+    </div>
+  </footer>
+
+
+
+
+
+
+
+
+  //JavaScript
+
+  <script>
+    lucide.createIcons();
+
+    async function sendLLM() {
+      const model = document.getElementById('llmModel').value;
+      const prompt = document.getElementById('llmPrompt').value;
+      const systemPrompt = document.getElementById('systemPrompt').value;
+      const btn = document.getElementById('llmBtn');
+      const status = document.getElementById('llmStatus');
+      const result = document.getElementById('llmResult');
+      const responseEl = document.getElementById('llmResponse');
+      const modelEl = document.getElementById('responseModel');
+
+      if (!prompt.trim()) {
+        alert('type something first');
+        return;
+      }
+
+
+
+
+
+      btn.disabled = true;
+      status.classList.remove('hidden');
+      result.classList.add('hidden');
+
+      try {
+
+
+        const res = await fetch(`/api/llm/${model}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, systemprompt: systemPrompt })
+        });
+
+
+
+
+
+
+
+
+        const data = await res.json();
+        
+        if (res.ok) {
+          responseEl.textContent = data.data?.text || 'no response text';
+          modelEl.textContent = model;
+          result.classList.remove('hidden');
+        } else {
+          responseEl.textContent = `error: ${data.error || 'something went wrong'}`;
+          modelEl.textContent = model;
+          result.classList.remove('hidden');
+        }
+
+
+
+
+
+      } catch (error) {
+        responseEl.textContent = `network error: ${error.message}`;
+        modelEl.textContent = model;
+        result.classList.remove('hidden');
+      }
+
+
+
+
+
+
+
+      btn.disabled = false;
+      status.classList.add('hidden');
+    }
+
+    async function generateImage() {
+      const model = document.getElementById('genModel').value;
+      const prompt = document.getElementById('genPrompt').value;
+      const aspectRatio = document.getElementById('aspectRatio').value;
+      const imageUrl = document.getElementById('imageUrl').value;
+      const btn = document.getElementById('genBtn');
+      const status = document.getElementById('genStatus');
+      const result = document.getElementById('genResult');
+      const img = document.getElementById('genImage');
+      const downloadLink = document.getElementById('downloadLink');
+
+      if (!prompt.trim()) {
+        alert('type something first');
+        return;
+      }
+
+
+
+
+
+
+
+
+      btn.disabled = true;
+      status.classList.remove('hidden');
+      result.classList.add('hidden');
+
+
+
+
+
+      try {
+        const res = await fetch(`/api/llm-gen/${model}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, aspect_ratio: aspectRatio, imageUrl })
+        });
+
+
+
+
+
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          img.src = url;
+          downloadLink.href = url;
+          result.classList.remove('hidden');
+        } else {
+          const data = await res.json();
+          alert(`error: ${data.error || 'failed to generate'}`);
+        }
+      } catch (error) {
+        alert(`network error: ${error.message}`);
+      }
+
+
+
+      
+
+      btn.disabled = false;
+      status.classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
